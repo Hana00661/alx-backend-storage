@@ -5,29 +5,23 @@
 from pymongo import MongoClient
 
 
-METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"]
+if __name__ == '__main__':
+    client = MongoClient('mongodb://127.0.0.1:27017')
+    nginx = client.logs.nginx
+    log = nginx.count_documents({})
+    get = nginx.count_documents({"method": "GET"})
+    post = nginx.count_documents({"method": "POST"})
+    put = nginx.count_documents({"method": "PUT"})
+    patch = nginx.count_documents({"method": "PATCH"})
+    delete = nginx.count_documents({"method": "DELETE"})
+    status_check = nginx.count_documents(
+        {"$and": [{"method": "GET"}, {"path": "/status"}]})
 
-
-def log_stats(mongo_collection, option=None):
-    """
-    Provide some stats about Nginx logs stored in MongoDB
-    """
-    items = {}
-    if option:
-        value = mongo_collection.count_documents(
-            {"method": {"$regex": option}})
-        print(f"\tmethod {option}: {value}")
-        return
-
-    result = mongo_collection.count_documents(items)
-    print(f"{result} logs")
-    print("Methods:")
-    for method in METHODS:
-        log_stats(nginx_collection, method)
-    status_check = mongo_collection.count_documents({"path": "/status"})
-    print(f"{status_check} status check")
-
-
-if __name__ == "__main__":
-    nginx_collection = MongoClient('mongodb://127.0.0.1:27017').logs.nginx
-    log_stats(nginx_collection)
+    print('{} logs\nMethods:\n\
+    \tmethod GET: {}\n\
+    \tmethod POST: {}\n\
+    \tmethod PUT: {}\n\
+    \tmethod PATCH: {}\n\
+    \tmethod DELETE: {}\n{} status check'
+          .format(log, get, post, put, patch, delete, status_check)
+          )

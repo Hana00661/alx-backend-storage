@@ -1,35 +1,38 @@
 #!/usr/bin/env python3
-"""
-File: web.py
-"""
+""" getting page via url given and return count if access trials"""
 import requests
 import redis
 from functools import wraps
 
-store = redis.Redis()
+r = redis.Redis()
 
 
-def count_url_access(method):
-    """ Decorator counting times that URL is accessed """
-    @wraps(method)
-    def wrapper(url):
-        cached_key = "cached:" + url
-        cached_data = store.get(cached_key)
-        if cached_data:
-            return cached_data.decode("utf-8")
+def cache_page(func):
+    """decorator for counting access number"""
+    @wraps(func)
+    def wrapper(url: str) -> str:
+        """wrapper method"""
+        cache_key = f"page:{url}"
+        count_key = f"count:{url}"
 
-        count_key = "count:" + url
-        html = method(url)
-
-        store.incr(count_key)
-        store.set(cached_key, html)
-        store.expire(cached_key, 10)
-        return html
+        r.incr(count_key)
+        cached_page = r.get(cache_key)
+        if cached_page:
+            print("Returning cached content")
+            return cached_page.decode('utf-8')
+        content = func(url)
+        r.setex(cache_key, 10, content)
+        return content
     return wrapper
 
 
-@count_url_access
+@cache_page
 def get_page(url: str) -> str:
-    """ Returns HTML content of URL"""
-    res = requests.get(url)
-    return res.text
+    """method to get html of page via url"""
+    response = requests.get(url)
+    return response.text
+
+
+if __name__ == "__main__":
+    url = "http://slowwly.robertomurray.co.uk"
+    print(get_page(url))
